@@ -15,15 +15,17 @@ import org.apache.spark.sql.{Row, SparkSession}
 import org.scalatest._
 import scala.collection.JavaConversions._
 import com.inmobi.platform.spark.azure.eventhub._
-class TestProtoInEventhub extends FlatSpec {
+import prop._
+class TestProtoInEventhub extends PropSpec with TableDrivenPropertyChecks {
 
   lazy val spark: SparkSession = SparkSession.builder()
     //    .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     .master("local[*]").appName("test-proto-in-eventhub").getOrCreate()
   val schema: Schema = new Schema.Parser().parse(getClass.getResourceAsStream("/eventhub.avsc"))
-  val person1 = Person.newBuilder.setName("person1").setAge(30)
-  val person2 = Person.newBuilder.setName("person2").setAge(28)
-  val protoObjects = List(Home.newBuilder.addPeople(person1).addPeople(person2).setAddress("Address").build())
+  val person1: Person = Person.newBuilder.setName("person1").setAge(30).build()
+  val person2: Person = Person.newBuilder.setName("person2").setAge(28).build()
+  val protoObjects = Table("protoObject", person1, person2,
+    Home.newBuilder.addPeople(person1).addPeople(person2).setAddress("Address").build())
 
   def compareMessage(message: AbstractMessage, row: Row): Unit = {
     message.getAllFields.foreach { case (field, value) =>
@@ -54,34 +56,34 @@ class TestProtoInEventhub extends FlatSpec {
   }
 
   def readableProtoInEventhub(protoObject: AbstractMessage): Unit = {
-    it should "be readable as it is after being written to eventhub" in {
-      val data = {
-        val data: GenericData.Record = new GenericData.Record(schema)
-        data.put("SequenceNumber", 1L)
-        data.put("Offset", "offsetValue")
-        data.put("EnqueuedTimeUtc", System.currentTimeMillis().toString)
-        val systemProps: util.Map[String, Any] = Map("path" -> "blah")
-        data.put("SystemProperties", systemProps)
-        data.put("Properties", systemProps)
-        data.put("Body", ByteBuffer.wrap(protoObject.toByteArray))
-        data
-      }
-      val file = File.createTempFile("eventinfo-proto-", ".avro")
-      val datumWriter = new GenericDatumWriter[GenericRecord](schema)
-      val dataFileWriter = new DataFileWriter[GenericRecord](datumWriter)
-      dataFileWriter.create(schema, file)
-      dataFileWriter.append(data)
-      dataFileWriter.close()
-
-      val df = spark.read.option("proto.class.name", protoObject.getClass.getName).azureEventhub(file.getAbsolutePath)
-      val rows = df.collect()
-      assert(rows.length === 1)
-      val row: Row = rows.head
-      compareMessage(protoObject, row)
+    val data = {
+      val data: GenericData.Record = new GenericData.Record(schema)
+      data.put("SequenceNumber", 1L)
+      data.put("Offset", "offsetValue")
+      data.put("EnqueuedTimeUtc", System.currentTimeMillis().toString)
+      val systemProps: util.Map[String, Any] = Map("path" -> "blah")
+      data.put("SystemProperties", systemProps)
+      data.put("Properties", systemProps)
+      data.put("Body", ByteBuffer.wrap(protoObject.toByteArray))
+      data
     }
+    val file = File.createTempFile("eventinfo-proto-", ".avro")
+    val datumWriter = new GenericDatumWriter[GenericRecord](schema)
+    val dataFileWriter = new DataFileWriter[GenericRecord](datumWriter)
+    dataFileWriter.create(schema, file)
+    dataFileWriter.append(data)
+    dataFileWriter.close()
+
+    val df = spark.read.option("proto.class.name", protoObject.getClass.getName).azureEventhub(file.getAbsolutePath)
+    val rows = df.collect()
+    assert(rows.length === 1)
+    val row: Row = rows.head
+    compareMessage(protoObject, row)
   }
 
-  protoObjects.foreach { protoObject =>
-    it should behave like readableProtoInEventhub(protoObject)
+  property("Proto object should be readable via spark") {
+    forAll(protoObjects) { (protoObject: AbstractMessage) =>
+      readableProtoInEventhub(protoObject)
+    }
   }
 }

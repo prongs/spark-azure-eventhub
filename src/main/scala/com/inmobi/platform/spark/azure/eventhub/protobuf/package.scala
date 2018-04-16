@@ -15,7 +15,7 @@ import scala.reflect.runtime.universe
 /**
   * Support for generating catalyst schemas for protobuf objects.
   */
-object ProtoSupport {
+package object protobuf {
   /** The mirror used to access types in the universe */
   def mirror: universe.Mirror = universe.runtimeMirror(Thread.currentThread().getContextClassLoader)
 

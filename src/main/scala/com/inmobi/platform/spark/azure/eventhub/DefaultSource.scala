@@ -4,7 +4,7 @@ import java.net.URI
 import java.nio.ByteBuffer
 
 import com.google.protobuf.AbstractMessage
-import ProtoSupport.SerializableParser
+import com.inmobi.platform.spark.azure.eventhub.protobuf
 import org.apache.avro.Schema
 import org.apache.avro.file.DataFileReader
 import org.apache.avro.generic.{GenericDatumReader, GenericRecord}
@@ -25,7 +25,7 @@ import scala.util.control.NonFatal
 class DefaultSource extends FileFormat with DataSourceRegister {
   override def inferSchema(sparkSession: SparkSession, options: Map[String, String], files: Seq[FileStatus]): Option[StructType] = {
     val className: Class[_ <: AbstractMessage] = Class.forName(options("proto.class.name")).asSubclass(classOf[AbstractMessage])
-    Some(ProtoSupport.schemaFor(className).dataType.asInstanceOf[StructType])
+    Some(protobuf.schemaFor(className).dataType.asInstanceOf[StructType])
   }
 
   override def prepareWrite(sparkSession: SparkSession, job: Job, options: Map[String, String], dataSchema: StructType): OutputWriterFactory = ???
@@ -42,7 +42,7 @@ class DefaultSource extends FileFormat with DataSourceRegister {
                             hadoopConf: Configuration): (PartitionedFile) => Iterator[InternalRow] = {
 
     val protoClass: Class[_ <: AbstractMessage] = Class.forName(options("proto.class.name")).asSubclass(classOf[AbstractMessage])
-    val parser: SerializableParser[_ <: AbstractMessage] = ProtoSupport.parserFor(protoClass)
+    val parser: protobuf.SerializableParser[_ <: AbstractMessage] = protobuf.parserFor(protoClass)
     val broadCastedParser = spark.sparkContext.broadcast(parser)
     (file: PartitionedFile) => {
       val log = LoggerFactory.getLogger(classOf[DefaultSource])
@@ -96,7 +96,7 @@ class DefaultSource extends FileFormat with DataSourceRegister {
           val record: GenericRecord = reader.next()
           val bytes = record.get("Body").asInstanceOf[ByteBuffer]
           val message = parser.parseFrom(bytes)
-          ProtoSupport.messageToRow(message)
+          protobuf.messageToRow(message)
         }
       }
 
