@@ -13,9 +13,8 @@ import org.apache.avro.file.DataFileWriter
 import org.apache.avro.generic.{GenericData, GenericDatumWriter, GenericRecord}
 import org.apache.spark.sql.{Row, SparkSession}
 import org.scalatest._
-
 import scala.collection.JavaConversions._
-
+import com.inmobi.platform.spark.azure.eventhub._
 class TestProtoInEventhub extends FlatSpec {
 
   lazy val spark: SparkSession = SparkSession.builder()
