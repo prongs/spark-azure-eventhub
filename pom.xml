@@ -19,7 +19,7 @@
         <spark.version>2.0.2</spark.version>
         <scalatest.version>3.0.5</scalatest.version>
         <spark.avro.version>4.0.0</spark.avro.version>
-        <protobuf.input.directory>${project.basedir}/src/main/protobuf</protobuf.input.directory>
+        <protobuf.input.directory>${project.basedir}/src/test/protobuf</protobuf.input.directory>
         <generatedSources>${project.basedir}/target/generated-sources</generatedSources>
         <testGeneratedSources>${project.basedir}/target/generated-test-sources</testGeneratedSources>
         <protobuf.output.directory>${testGeneratedSources}/protobuf</protobuf.output.directory>
