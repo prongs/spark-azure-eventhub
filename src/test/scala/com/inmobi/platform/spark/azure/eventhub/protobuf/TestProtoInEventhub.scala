@@ -1,4 +1,4 @@
-package com.inmobi.platform.spark.azure.eventhub
+package com.inmobi.platform.spark.azure.eventhub.protobuf
 
 import java.io.File
 import java.nio.ByteBuffer
@@ -8,20 +8,21 @@ import com.google.protobuf.AbstractMessage
 import com.google.protobuf.Descriptors.FieldDescriptor
 import com.google.protobuf.Descriptors.FieldDescriptor.JavaType._
 import com.inmobi.platform.Test.{Home, Person}
-import org.apache.avro.Schema
+import com.inmobi.platform.spark.azure.eventhub._
 import org.apache.avro.file.DataFileWriter
 import org.apache.avro.generic.{GenericData, GenericDatumWriter, GenericRecord}
 import org.apache.spark.sql.{Row, SparkSession}
 import org.scalatest._
+import org.scalatest.prop._
+import org.apache.avro.{Schema=>AvroSchema}
+
 import scala.collection.JavaConversions._
-import com.inmobi.platform.spark.azure.eventhub._
-import prop._
 class TestProtoInEventhub extends PropSpec with TableDrivenPropertyChecks {
 
   lazy val spark: SparkSession = SparkSession.builder()
     //    .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     .master("local[*]").appName("test-proto-in-eventhub").getOrCreate()
-  val schema: Schema = new Schema.Parser().parse(getClass.getResourceAsStream("/eventhub.avsc"))
+  val schema: AvroSchema = new AvroSchema.Parser().parse(getClass.getResourceAsStream("/eventhub.avsc"))
   val person1: Person = Person.newBuilder.setName("person1").setAge(30).build()
   val person2: Person = Person.newBuilder.setName("person2").setAge(28).build()
   val protoObjects = Table("protoObject", person1, person2,
